@@ -1,1 +1,2 @@
-Now we can read files and print it out successfully.
+x := 10;
+y := 20;
