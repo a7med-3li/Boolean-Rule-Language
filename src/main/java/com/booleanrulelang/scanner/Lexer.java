@@ -82,6 +82,14 @@ public class Lexer {
 							tokens.add(new Token(TokenType.LT, "<", line));
 						}
 						break;
+					case '=':
+						if ((c = reader.read()) == '=') {
+							tokens.add(new Token(TokenType.EQ, "==", line));
+						} else {
+							reader.unread(c);
+							throw new UnrecognizedText(line, ch);
+						}
+						break;
 						
 					default:
 						if (Character.isWhitespace(ch)) {
