@@ -34,7 +34,6 @@ public class Lexer {
 		List<Token> tokens = new ArrayList<>();
 		int line = 1;
 		
-		// Step 1: Use BufferedReader inside a Try-with-resources
 		try (PushbackReader reader = new PushbackReader(new BufferedReader(new FileReader(filePath)))) {
 			int c;
 			while ((c = reader.read()) != -1) {
@@ -87,10 +86,9 @@ public class Lexer {
 					default:
 						if (Character.isWhitespace(ch)) {
 							if (ch == '\n') line++;
-							continue; // Skip whitespace
+							continue;
 						}
 						if (Character.isDigit(ch)) {
-							// Handle Literals: NUMBER
 							tokens.add(readNumber(ch, reader, line));
 						} else if (Character.isLetter(ch)) {
 							// Handle Identifiers and Keywords
@@ -129,7 +127,7 @@ public class Lexer {
 		}
 		if (c != -1) reader.unread(c);
 		String identifierStr = sb.toString();
-		return new Token(keywords.getOrDefault(identifierStr, TokenType.ID), identifierStr, line);
 		
+		return new Token(keywords.getOrDefault(identifierStr.toLowerCase(), TokenType.ID), identifierStr, line);
 	}
 }
