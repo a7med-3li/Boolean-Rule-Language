@@ -13,6 +13,9 @@ import com.booleanrulelang.domain.ProgramNode;
 import com.booleanrulelang.domain.Token;
 import com.booleanrulelang.domain.TokenType;
 import com.booleanrulelang.domain.UnaryOpNode;
+import com.booleanrulelang.exception.StatementException;
+import com.booleanrulelang.exception.SyntaxException;
+import com.booleanrulelang.exception.UnexpectedTokenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -25,7 +28,6 @@ public class Parser {
 	private List<Token> tokens;
 	private int currentPosition = 0;
 	
-	// program = { statement } ;
 	public ProgramNode parseProgram(List<Token> tokens) {
 		this.tokens = tokens;
 		List<Node> statements = new ArrayList<>();
@@ -35,20 +37,15 @@ public class Parser {
 		return new ProgramNode(statements);
 	}
 	
-	// statement = assignment | print_stmt ;
 	private Node parseStatement() {
 		if (check(TokenType.PRINT)) {
 			return parsePrint();
 		} else if (check(TokenType.ID)) {
 			return parseAssignment();
 		}
-		throw new RuntimeException(
-				"Parse error at line " + peek().line() +
-						": expected statement, got '" + peek().lexeme() + "'"
-		);
+		throw new StatementException(peek().line(), peek().lexeme());
 	}
-	
-	// assignment = identifier ":=" expression ";" ;
+
 	private AssignNode parseAssignment() {
 		Token id = expect(TokenType.ID, "identifier");
 		expect(TokenType.ASSIGN, ":=");
@@ -57,7 +54,6 @@ public class Parser {
 		return new AssignNode(id.lexeme(), value);
 	}
 	
-	// print_stmt = "print" expression ";" ;
 	private PrintNode parsePrint() {
 		expect(TokenType.PRINT, "print");
 		Node expr = parseExpression();
@@ -65,46 +61,41 @@ public class Parser {
 		return new PrintNode(expr);
 	}
 	
-	// expression = logic_or ;
 	private Node parseExpression() {
 		return parseLogicOr();
 	}
-	
-	// logic_or = logic_and { "or" logic_and } ;
+
 	private Node parseLogicOr() {
 		Node left = parseLogicAnd();
 		
 		while (check(TokenType.OR)) {
-			advance();  // consume "or"
+			advance();
 			Node right = parseLogicAnd();
 			left = new BinaryOpNode("or", left, right);
 		}
 		return left;
 	}
 	
-	// logic_and = logic_not { "and" logic_not } ;
 	private Node parseLogicAnd() {
 		Node left = parseLogicNot();
 		
 		while (check(TokenType.AND)) {
-			advance();  // consume "and"
+			advance();
 			Node right = parseLogicNot();
 			left = new BinaryOpNode("and", left, right);
 		}
 		return left;
 	}
-	
-	// logic_not = [ "not" ] comparison ;
+
 	private Node parseLogicNot() {
 		if (check(TokenType.NOT)) {
-			advance();  // consume "not"
-			Node operand = parseLogicNot(); // right-recursive so "not not x" works
+			advance();
+			Node operand = parseLogicNot();
 			return new UnaryOpNode("not", operand);
 		}
 		return parseComparison();
 	}
 	
-	// comparison = arithmetic [ comp_op arithmetic ] ;
 	private Node parseComparison() {
 		Node left = parseArithmetic();
 		
@@ -112,14 +103,13 @@ public class Parser {
 				check(TokenType.LT)  || check(TokenType.GT)  ||
 				check(TokenType.LEQ) || check(TokenType.GEQ)) {
 			
-			Token op = advance();  // consume the operator
+			Token op = advance();
 			Node right = parseArithmetic();
 			return new BinaryOpNode(op.lexeme(), left, right);
 		}
 		return left;
 	}
-	
-	// arithmetic = term { ( "+" | "-" ) term } ;
+
 	private Node parseArithmetic() {
 		Node left = parseTerm();
 		
@@ -131,7 +121,6 @@ public class Parser {
 		return left;
 	}
 	
-	// term = factor { ( "*" | "/" ) factor } ;
 	private Node parseTerm() {
 		Node left = parseFactor();
 		
@@ -143,17 +132,15 @@ public class Parser {
 		return left;
 	}
 	
-	// factor = [ "-" ] primary ;
 	private Node parseFactor() {
 		if (check(TokenType.MINUS)) {
-			advance();  // consume "-"
+			advance();
 			Node operand = parsePrimary();
 			return new UnaryOpNode("-", operand);
 		}
 		return parsePrimary();
 	}
 	
-	// primary = NUMBER | IDENTIFIER | "true" | "false" | "(" expression ")" ;
 	private Node parsePrimary() {
 		Token t = peek();
 		
@@ -178,36 +165,29 @@ public class Parser {
 		}
 		
 		if (t.type() == TokenType.LPAREN) {
-			advance();                          // consume "("
-			Node inner = parseExpression();     // recurse fully
-			expect(TokenType.RPAREN, ")");      // consume ")"
+			advance();
+			Node inner = parseExpression();
+			expect(TokenType.RPAREN, ")");
 			return inner;
 		}
 		
-		throw new RuntimeException(
-				"Parse error at line " + t.line() +
-						": unexpected token '" + t.lexeme() + "'"
-		);
+		throw new UnexpectedTokenException(t.line(), t.lexeme());
 	}
 	
-	// Look at current token without consuming it
 	private Token peek() {
 		return tokens.get(currentPosition);
 	}
 	
-	// Consume and return the current token
 	private Token advance() {
 		Token t = tokens.get(currentPosition);
 		currentPosition++;
 		return t;
 	}
 	
-	// Check if current token matches type (without consuming)
 	private boolean check(TokenType type) {
 		return peek().type() == type;
 	}
-	
-	// Consume if matches, return true. Otherwise, return false.
+
 	private boolean match(TokenType... types) {
 		for (TokenType type : types) {
 			if (check(type)) {
@@ -217,16 +197,11 @@ public class Parser {
 		}
 		return false;
 	}
-	
-	// Consume and assert — throws if wrong token
+
 	private Token expect(TokenType type, String message) {
 		if (!check(type)) {
 			Token t = peek();
-			throw new RuntimeException(
-					"Parse error at line " + t.line() +
-							": expected " + message +
-							" but got '" + t.lexeme()+ "'"
-			);
+			throw new SyntaxException(t.line(), message, t.lexeme());
 		}
 		return advance();
 	}

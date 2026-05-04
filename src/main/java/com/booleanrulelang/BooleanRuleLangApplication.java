@@ -23,10 +23,9 @@ public class BooleanRuleLangApplication implements CommandLineRunner {
 	@Override
 	public void run(String @NonNull ... args) {
 		try {
-			
 			if (args.length == 0) {
 				System.err.println("Usage: java -jar <app.jar> <source-file-path>");
-				System.exit(2);
+				return;
 			}
 			
 			String sourcePath = args[0];
@@ -35,13 +34,10 @@ public class BooleanRuleLangApplication implements CommandLineRunner {
 		} catch(SourceFileException e) {
 			throw new SourceFileException(e.getMessage());
 		} catch (CompilerException e) {
-			// Shows the user exactly what went wrong
 			System.err.println(e.getFormattedMessage());
 			System.exit(e.getExitCode());
 		} catch (Exception e) {
-			// Catch-all for unexpected bugs
 			System.err.println("Internal Compiler Error: " + e.getMessage());
-			e.printStackTrace();
 			System.exit(1);
 		}
 	}
