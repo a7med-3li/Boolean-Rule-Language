@@ -18,6 +18,10 @@ mvn -q package
 
 Pass **one argument**: path to a **source file**.
 
+By default, **type and parse errors do not call `System.exit`**, so `mvn spring-boot:run` finishes with **BUILD SUCCESS** while still printing the error on stderr. For scripts that need a non-zero exit code, set:
+
+`BOOLEANRULE_STRICT_EXIT=1` (e.g. PowerShell: `$env:BOOLEANRULE_STRICT_EXIT='1'; java -jar ...`).
+
 ```powershell
 mvn -q spring-boot:run "-Dspring-boot.run.arguments=examples/demo-logic.txt"
 ```
