@@ -1,0 +1,2 @@
+result := (1 + 2) * 3 >= 9 and not false;
+print result;
