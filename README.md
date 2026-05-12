@@ -28,7 +28,11 @@ Or:
 java -jar target\Boolean-rule-lang-0.0.1-SNAPSHOT.jar examples\demo-logic.txt
 ```
 
-On success you get an **AST pre-order traversal** printed to stdout.
+On success the pipeline runs **type checking** then **interpretation**:
+
+- **`print`** statements print the evaluated value.
+- **`name := expr`** binds the variable and prints `name := value` so you see the stored value (e.g. **`x`** after `x := ...`).
+- **`Type error:`** … if operands disagree with the rules (e.g. `true + 5` in [`docs/test.txt`](docs/test.txt)).
 
 ## Demo bundle
 
