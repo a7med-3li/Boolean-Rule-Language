@@ -8,12 +8,12 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @AllArgsConstructor
-public class BinaryOpNode extends Node {
+public class LogicalOpNode extends Node {
 	public String op;
 	public Node left, right;
-	
+
 	@Override
 	public <T> T accept(ASTVisitor<T> visitor) {
-		return visitor.visitBinaryOp(this);
+		return visitor.visitLogicalOp(this);
 	}
 }

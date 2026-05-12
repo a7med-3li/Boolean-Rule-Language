@@ -1,14 +1,17 @@
 package com.booleanrulelang.visitor;
 
+import com.booleanrulelang.domain.ArithmeticOpNode;
 import com.booleanrulelang.domain.AssignNode;
-import com.booleanrulelang.domain.BinaryOpNode;
 import com.booleanrulelang.domain.BoolNode;
+import com.booleanrulelang.domain.ComparisonOpNode;
 import com.booleanrulelang.domain.IdentifierNode;
+import com.booleanrulelang.domain.LogicalOpNode;
+import com.booleanrulelang.domain.NegationNode;
 import com.booleanrulelang.domain.Node;
+import com.booleanrulelang.domain.NotNode;
 import com.booleanrulelang.domain.NumberNode;
 import com.booleanrulelang.domain.PrintNode;
 import com.booleanrulelang.domain.ProgramNode;
-import com.booleanrulelang.domain.UnaryOpNode;
 import org.springframework.stereotype.Component;
 
 /**
@@ -72,8 +75,8 @@ public class ASTTraversalPrinter {
 		}
 
 		@Override
-		public Void visitBinaryOp(BinaryOpNode node) {
-			appendLine("binary " + node.op);
+		public Void visitArithmeticOp(ArithmeticOpNode node) {
+			appendLine("arithmetic " + node.op);
 			depth++;
 			node.left.accept(this);
 			node.right.accept(this);
@@ -82,8 +85,37 @@ public class ASTTraversalPrinter {
 		}
 
 		@Override
-		public Void visitUnaryOp(UnaryOpNode node) {
-			appendLine("unary " + node.op);
+		public Void visitComparisonOp(ComparisonOpNode node) {
+			appendLine("comparison " + node.op);
+			depth++;
+			node.left.accept(this);
+			node.right.accept(this);
+			depth--;
+			return null;
+		}
+
+		@Override
+		public Void visitLogicalOp(LogicalOpNode node) {
+			appendLine("logical " + node.op);
+			depth++;
+			node.left.accept(this);
+			node.right.accept(this);
+			depth--;
+			return null;
+		}
+
+		@Override
+		public Void visitNot(NotNode node) {
+			appendLine("not");
+			depth++;
+			node.operand.accept(this);
+			depth--;
+			return null;
+		}
+
+		@Override
+		public Void visitNegation(NegationNode node) {
+			appendLine("negate");
 			depth++;
 			node.operand.accept(this);
 			depth--;

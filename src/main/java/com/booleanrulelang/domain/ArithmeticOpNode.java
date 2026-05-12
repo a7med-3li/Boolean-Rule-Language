@@ -8,12 +8,12 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @AllArgsConstructor
-public class UnaryOpNode extends Node {
+public class ArithmeticOpNode extends Node {
 	public String op;
-	public Node operand;
-	
+	public Node left, right;
+
 	@Override
 	public <T> T accept(ASTVisitor<T> visitor) {
-		return visitor.visitUnaryOp(this);
+		return visitor.visitArithmeticOp(this);
 	}
 }

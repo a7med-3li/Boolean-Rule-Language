@@ -1,14 +1,17 @@
 package com.booleanrulelang.semantics;
 
+import com.booleanrulelang.domain.ArithmeticOpNode;
 import com.booleanrulelang.domain.AssignNode;
-import com.booleanrulelang.domain.BinaryOpNode;
 import com.booleanrulelang.domain.BoolNode;
+import com.booleanrulelang.domain.ComparisonOpNode;
 import com.booleanrulelang.domain.IdentifierNode;
+import com.booleanrulelang.domain.LogicalOpNode;
+import com.booleanrulelang.domain.NegationNode;
 import com.booleanrulelang.domain.Node;
+import com.booleanrulelang.domain.NotNode;
 import com.booleanrulelang.domain.NumberNode;
 import com.booleanrulelang.domain.PrintNode;
 import com.booleanrulelang.domain.ProgramNode;
-import com.booleanrulelang.domain.UnaryOpNode;
 import com.booleanrulelang.exception.EvaluationException;
 import com.booleanrulelang.runtime.BooleanValue;
 import com.booleanrulelang.runtime.NumberValue;
@@ -50,65 +53,50 @@ public class Interpreter {
 			}
 			return v;
 		}
-		if (node instanceof UnaryOpNode u) {
-			RuntimeValue inner = eval(u.operand, env);
-			if ("not".equals(u.op)) {
-				return new BooleanValue(!asBoolean(inner));
-			}
-			if ("-".equals(u.op)) {
-				return new NumberValue(-asNumber(inner));
-			}
-			throw new EvaluationException("Unknown unary operator '" + u.op + "'");
+		if (node instanceof NotNode n) {
+			return new BooleanValue(!asBoolean(eval(n.operand, env)));
 		}
-		if (node instanceof BinaryOpNode b) {
-			return evalBinary(b.op, eval(b.left, env), eval(b.right, env));
+		if (node instanceof NegationNode n) {
+			return new NumberValue(-asNumber(eval(n.operand, env)));
+		}
+		if (node instanceof ArithmeticOpNode b) {
+			double l = asNumber(eval(b.left, env));
+			double r = asNumber(eval(b.right, env));
+			return switch (b.op) {
+				case "+" -> new NumberValue(l + r);
+				case "-" -> new NumberValue(l - r);
+				case "*" -> new NumberValue(l * r);
+				case "/" -> {
+					if (r == 0.0) {
+						throw new EvaluationException("Division by zero");
+					}
+					yield new NumberValue(l / r);
+				}
+				default -> throw new EvaluationException("Unknown arithmetic operator '" + b.op + "'");
+			};
+		}
+		if (node instanceof ComparisonOpNode b) {
+			RuntimeValue left = eval(b.left, env);
+			RuntimeValue right = eval(b.right, env);
+			return switch (b.op) {
+				case "==" -> new BooleanValue(equality(left, right));
+				case "!=" -> new BooleanValue(!equality(left, right));
+				case "<"  -> new BooleanValue(asNumber(left) <  asNumber(right));
+				case ">"  -> new BooleanValue(asNumber(left) >  asNumber(right));
+				case "<=" -> new BooleanValue(asNumber(left) <= asNumber(right));
+				case ">=" -> new BooleanValue(asNumber(left) >= asNumber(right));
+				default -> throw new EvaluationException("Unknown comparison operator '" + b.op + "'");
+			};
+		}
+		if (node instanceof LogicalOpNode b) {
+			return switch (b.op) {
+				case "and" -> new BooleanValue(asBoolean(eval(b.left, env)) && asBoolean(eval(b.right, env)));
+				case "or"  -> new BooleanValue(asBoolean(eval(b.left, env)) || asBoolean(eval(b.right, env)));
+				default -> throw new EvaluationException("Unknown logical operator '" + b.op + "'");
+			};
 		}
 		throw new EvaluationException(
 				"Unsupported expression node: " + node.getClass().getSimpleName());
-	}
-
-	private static RuntimeValue evalBinary(String op, RuntimeValue left, RuntimeValue right) {
-		if ("and".equals(op)) {
-			return new BooleanValue(asBoolean(left) && asBoolean(right));
-		}
-		if ("or".equals(op)) {
-			return new BooleanValue(asBoolean(left) || asBoolean(right));
-		}
-		if ("+".equals(op)) {
-			return new NumberValue(asNumber(left) + asNumber(right));
-		}
-		if ("-".equals(op)) {
-			return new NumberValue(asNumber(left) - asNumber(right));
-		}
-		if ("*".equals(op)) {
-			return new NumberValue(asNumber(left) * asNumber(right));
-		}
-		if ("/".equals(op)) {
-			double denominator = asNumber(right);
-			if (denominator == 0.0) {
-				throw new EvaluationException("Division by zero");
-			}
-			return new NumberValue(asNumber(left) / denominator);
-		}
-		if ("<".equals(op)) {
-			return new BooleanValue(asNumber(left) < asNumber(right));
-		}
-		if (">".equals(op)) {
-			return new BooleanValue(asNumber(left) > asNumber(right));
-		}
-		if ("<=".equals(op)) {
-			return new BooleanValue(asNumber(left) <= asNumber(right));
-		}
-		if (">=".equals(op)) {
-			return new BooleanValue(asNumber(left) >= asNumber(right));
-		}
-		if ("==".equals(op)) {
-			return new BooleanValue(equality(left, right));
-		}
-		if ("!=".equals(op)) {
-			return new BooleanValue(!equality(left, right));
-		}
-		throw new EvaluationException("Unknown binary operator '" + op + "'");
 	}
 
 	private static boolean equality(RuntimeValue left, RuntimeValue right) {

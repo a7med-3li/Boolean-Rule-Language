@@ -1,14 +1,17 @@
 package com.booleanrulelang.semantics;
 
+import com.booleanrulelang.domain.ArithmeticOpNode;
 import com.booleanrulelang.domain.AssignNode;
-import com.booleanrulelang.domain.BinaryOpNode;
 import com.booleanrulelang.domain.BoolNode;
+import com.booleanrulelang.domain.ComparisonOpNode;
 import com.booleanrulelang.domain.IdentifierNode;
+import com.booleanrulelang.domain.LogicalOpNode;
+import com.booleanrulelang.domain.NegationNode;
 import com.booleanrulelang.domain.Node;
+import com.booleanrulelang.domain.NotNode;
 import com.booleanrulelang.domain.NumberNode;
 import com.booleanrulelang.domain.PrintNode;
 import com.booleanrulelang.domain.ProgramNode;
-import com.booleanrulelang.domain.UnaryOpNode;
 import com.booleanrulelang.exception.TypeCheckException;
 import com.booleanrulelang.types.Type;
 import java.util.HashMap;
@@ -46,57 +49,52 @@ public class TypeChecker {
 			}
 			return t;
 		}
-		if (node instanceof UnaryOpNode u) {
-			Type inner = inferExpr(u.operand, env);
-			if ("not".equals(u.op)) {
-				expectBoolean(inner, "operand of 'not'");
+		if (node instanceof NotNode n) {
+			Type inner = inferExpr(n.operand, env);
+			expectBoolean(inner, "operand of 'not'");
+			return Type.BOOLEAN;
+		}
+		if (node instanceof NegationNode n) {
+			Type inner = inferExpr(n.operand, env);
+			expectNumber(inner, "operand of unary '-'");
+			return Type.NUMBER;
+		}
+		if (node instanceof ArithmeticOpNode b) {
+			Type l = inferExpr(b.left, env);
+			Type r = inferExpr(b.right, env);
+			expectNumber(l, "left operand of '" + b.op + "'");
+			expectNumber(r, "right operand of '" + b.op + "'");
+			return Type.NUMBER;
+		}
+		if (node instanceof ComparisonOpNode b) {
+			Type l = inferExpr(b.left, env);
+			Type r = inferExpr(b.right, env);
+			if ("==".equals(b.op) || "!=".equals(b.op)) {
+				if (l != r) {
+					throw new TypeCheckException(
+							"Operands of '"
+									+ b.op
+									+ "' must have the same type (got "
+									+ l
+									+ " and "
+									+ r
+									+ ")");
+				}
 				return Type.BOOLEAN;
 			}
-			if ("-".equals(u.op)) {
-				expectNumber(inner, "operand of unary '-'");
-				return Type.NUMBER;
-			}
-			throw new TypeCheckException("Unknown unary operator '" + u.op + "'");
+			expectNumber(l, "left operand of '" + b.op + "'");
+			expectNumber(r, "right operand of '" + b.op + "'");
+			return Type.BOOLEAN;
 		}
-		if (node instanceof BinaryOpNode b) {
-			Type left = inferExpr(b.left, env);
-			Type right = inferExpr(b.right, env);
-			return inferBinary(b.op, left, right);
+		if (node instanceof LogicalOpNode b) {
+			Type l = inferExpr(b.left, env);
+			Type r = inferExpr(b.right, env);
+			expectBoolean(l, "left operand of '" + b.op + "'");
+			expectBoolean(r, "right operand of '" + b.op + "'");
+			return Type.BOOLEAN;
 		}
 		throw new TypeCheckException(
 				"Unsupported expression node: " + node.getClass().getSimpleName());
-	}
-
-	private Type inferBinary(String op, Type left, Type right) {
-		if ("and".equals(op) || "or".equals(op)) {
-			expectBoolean(left, "left operand of '" + op + "'");
-			expectBoolean(right, "right operand of '" + op + "'");
-			return Type.BOOLEAN;
-		}
-		if ("+".equals(op) || "-".equals(op) || "*".equals(op) || "/".equals(op)) {
-			expectNumber(left, "left operand of '" + op + "'");
-			expectNumber(right, "right operand of '" + op + "'");
-			return Type.NUMBER;
-		}
-		if ("<".equals(op) || ">".equals(op) || "<=".equals(op) || ">=".equals(op)) {
-			expectNumber(left, "left operand of '" + op + "'");
-			expectNumber(right, "right operand of '" + op + "'");
-			return Type.BOOLEAN;
-		}
-		if ("==".equals(op) || "!=".equals(op)) {
-			if (left != right) {
-				throw new TypeCheckException(
-						"Operands of '"
-								+ op
-								+ "' must have the same type (got "
-								+ left
-								+ " and "
-								+ right
-								+ ")");
-			}
-			return Type.BOOLEAN;
-		}
-		throw new TypeCheckException("Unknown binary operator '" + op + "'");
 	}
 
 	private static void expectNumber(Type t, String context) {
