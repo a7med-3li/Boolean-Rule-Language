@@ -57,6 +57,7 @@ public class Lexer {
 							tokens.add(new Token(TokenType.ASSIGN, ":=", line));
 						}else{
 							reader.unread(c);
+							throw new UnrecognizedText(line, ch);
 						}
 						break;
 					case '!':
